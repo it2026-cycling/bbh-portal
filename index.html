@@ -3,10 +3,104 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>BestBikeHotels Portal</title>
+    <title>BBH Portal</title>
+    <style>
+      body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; margin: 24px; }
+      .card { border: 1px solid #ddd; border-radius: 12px; padding: 16px; max-width: 720px; }
+      .muted { color: #666; }
+      .ok { color: #0a7; font-weight: 600; }
+      .bad { color: #b00; font-weight: 700; }
+      code { background: #f6f6f6; padding: 2px 6px; border-radius: 6px; }
+      .row { display:flex; gap:12px; flex-wrap:wrap; margin-top:12px; }
+      .pill { border:1px solid #ddd; border-radius: 999px; padding: 6px 10px; }
+    </style>
   </head>
   <body>
-    <h1>Portal BestBikeHotels</h1>
-    <p>Setup Cloudflare Pages OK ✅</p>
+    <h1>BBH Portal</h1>
+    <div id="app" class="card">
+      <div class="muted">Caricamento…</div>
+    </div>
+
+    <script>
+      async function loadMe() {
+        const app = document.getElementById("app");
+        try {
+          const res = await fetch("/api/me", { credentials: "include" });
+
+          if (res.status === 401) {
+            app.innerHTML = `
+              <div class="bad">Non autenticato</div>
+              <p class="muted">Torna indietro e completa il login OTP.</p>
+            `;
+            return;
+          }
+
+          if (res.status === 403) {
+            const data = await res.json().catch(() => ({}));
+            app.innerHTML = `
+              <div class="bad">Accesso non autorizzato</div>
+              <p class="muted">La tua email <code>${(data.email || "sconosciuta")}</code> non risulta abilitata nel sistema.</p>
+              <p class="muted">Contatta l’amministratore per essere aggiunto in Airtable.</p>
+            `;
+            return;
+          }
+
+          if (!res.ok) {
+            const txt = await res.text().catch(() => "");
+            app.innerHTML = `
+              <div class="bad">Errore</div>
+              <p class="muted">Risposta inattesa dal server: <code>${res.status}</code></p>
+              <pre class="muted" style="white-space:pre-wrap">${txt}</pre>
+            `;
+            return;
+          }
+
+          const me = await res.json();
+          app.innerHTML = `
+            <div class="ok">Accesso OK</div>
+            <p class="muted">Email: <code>${me.email}</code></p>
+            <div class="row">
+              <span class="pill">Ruolo: <b>${me.role}</b></span>
+              <span class="pill">Stato: <b>${me.status}</b></span>
+            </div>
+            <hr style="margin:16px 0;border:none;border-top:1px solid #eee" />
+            <div id="roleArea"></div>
+          `;
+
+          const roleArea = document.getElementById("roleArea");
+
+          if (me.role === "admin") {
+            roleArea.innerHTML = `
+              <h3>Area Admin</h3>
+              <ul>
+                <li>Gestione strutture affiliate</li>
+                <li>Gestione manager e permessi</li>
+                <li>Gestione prenotazioni & relocation</li>
+                <li>Assistente AI (workflow n8n Admin)</li>
+              </ul>
+            `;
+          } else {
+            roleArea.innerHTML = `
+              <h3>Area Manager</h3>
+              <p class="muted">Strutture abilitate: <code>${(me.allowed_property_ids || []).join(", ") || "—"}</code></p>
+              <ul>
+                <li>Disponibilità e prezzi</li>
+                <li>Prenotazioni</li>
+                <li>Relocation (solo sulla stessa destination)</li>
+                <li>Assistente AI (workflow n8n Manager)</li>
+              </ul>
+            `;
+          }
+
+        } catch (e) {
+          app.innerHTML = `
+            <div class="bad">Errore di rete</div>
+            <p class="muted">${String(e)}</p>
+          `;
+        }
+      }
+
+      loadMe();
+    </script>
   </body>
 </html>
