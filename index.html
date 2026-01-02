@@ -6,91 +6,229 @@
     <title>BBH Portal</title>
     <style>
       body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; margin: 24px; }
-      .card { border: 1px solid #ddd; border-radius: 12px; padding: 16px; max-width: 720px; }
+      .card { border: 1px solid #ddd; border-radius: 12px; padding: 16px; max-width: 920px; }
       .muted { color: #666; }
       .ok { color: #0a7; font-weight: 600; }
       .bad { color: #b00; font-weight: 700; }
       code { background: #f6f6f6; padding: 2px 6px; border-radius: 6px; }
       .row { display:flex; gap:12px; flex-wrap:wrap; margin-top:12px; }
       .pill { border:1px solid #ddd; border-radius: 999px; padding: 6px 10px; }
+      nav { display:flex; gap:10px; flex-wrap:wrap; margin: 12px 0 16px; }
+      .btn {
+        border: 1px solid #ddd; border-radius: 10px; padding: 8px 12px;
+        background: #fff; cursor: pointer; text-decoration: none; color: inherit;
+      }
+      .btn.active { border-color: #111; }
+      table { width:100%; border-collapse: collapse; margin-top: 10px; }
+      th, td { text-align:left; padding:10px 8px; border-bottom: 1px solid #eee; }
+      th { font-size: 12px; text-transform: uppercase; letter-spacing: .04em; color: #444; }
+      .tag { display:inline-block; border:1px solid #ddd; border-radius: 999px; padding: 2px 8px; font-size: 12px; }
+      .topbar { display:flex; align-items:baseline; justify-content:space-between; gap:12px; flex-wrap:wrap; }
+      .small { font-size: 12px; }
     </style>
   </head>
   <body>
-    <h1>BBH Portal</h1>
+    <div class="topbar">
+      <h1 style="margin:0">BBH Portal</h1>
+      <div class="small muted" id="who"></div>
+    </div>
+
+    <nav id="nav" style="display:none">
+      <a class="btn" href="#/home" id="nav-home">Home</a>
+      <a class="btn" href="#/properties" id="nav-properties">Strutture</a>
+    </nav>
+
     <div id="app" class="card">
       <div class="muted">Caricamento…</div>
     </div>
 
     <script>
+      let CURRENT_ME = null;
+
+      function setActiveNav(route) {
+        const home = document.getElementById("nav-home");
+        const props = document.getElementById("nav-properties");
+        if (!home || !props) return;
+        home.classList.toggle("active", route === "home");
+        props.classList.toggle("active", route === "properties");
+      }
+
+      function renderUnauthorized(app, emailHint) {
+        app.innerHTML = `
+          <div class="bad">Accesso non autorizzato</div>
+          <p class="muted">La tua email <code>${(emailHint || "sconosciuta")}</code> non risulta abilitata nel sistema.</p>
+          <p class="muted">Contatta l’amministratore per essere aggiunto in Airtable.</p>
+        `;
+      }
+
+      function renderNotAuthenticated(app) {
+        app.innerHTML = `
+          <div class="bad">Non autenticato</div>
+          <p class="muted">Torna indietro e completa il login OTP.</p>
+        `;
+      }
+
+      function renderError(app, status, txt) {
+        app.innerHTML = `
+          <div class="bad">Errore</div>
+          <p class="muted">Risposta inattesa dal server: <code>${status}</code></p>
+          <pre class="muted" style="white-space:pre-wrap">${txt || ""}</pre>
+        `;
+      }
+
+      function renderHome(app, me) {
+        app.innerHTML = `
+          <div class="ok">Accesso OK</div>
+          <p class="muted">Email: <code>${me.email}</code></p>
+          <div class="row">
+            <span class="pill">Ruolo: <b>${me.role}</b></span>
+            <span class="pill">Stato: <b>${me.status}</b></span>
+          </div>
+          <hr style="margin:16px 0;border:none;border-top:1px solid #eee" />
+          <div id="roleArea"></div>
+        `;
+
+        const roleArea = document.getElementById("roleArea");
+
+        if (me.role === "admin") {
+          roleArea.innerHTML = `
+            <h3 style="margin-top:0">Area Admin</h3>
+            <ul>
+              <li>Gestione strutture affiliate</li>
+              <li>Gestione manager e permessi</li>
+              <li>Gestione prenotazioni & relocation</li>
+              <li>Assistente AI (workflow n8n Admin)</li>
+            </ul>
+            <p class="muted small">Suggerimento: vai su <b>Strutture</b> dal menu per vedere la lista reale da Airtable.</p>
+          `;
+        } else {
+          roleArea.innerHTML = `
+            <h3 style="margin-top:0">Area Manager</h3>
+            <p class="muted">Strutture abilitate (ID): <code>${(me.allowed_property_ids || []).join(", ") || "—"}</code></p>
+            <ul>
+              <li>Disponibilità e prezzi</li>
+              <li>Prenotazioni</li>
+              <li>Relocation (solo sulla stessa destination)</li>
+              <li>Assistente AI (workflow n8n Manager)</li>
+            </ul>
+            <p class="muted small">Vai su <b>Strutture</b> per vedere i dettagli delle tue strutture.</p>
+          `;
+        }
+      }
+
+      async function renderProperties(app, me) {
+        app.innerHTML = `<div class="muted">Caricamento strutture…</div>`;
+        try {
+          const res = await fetch("/api/properties", { credentials: "include" });
+
+          if (res.status === 401) return renderNotAuthenticated(app);
+          if (res.status === 403) {
+            const data = await res.json().catch(() => ({}));
+            return renderUnauthorized(app, data.email || me?.email);
+          }
+          if (!res.ok) {
+            const txt = await res.text().catch(() => "");
+            return renderError(app, res.status, txt);
+          }
+
+          const data = await res.json();
+          const items = data.items || [];
+
+          app.innerHTML = `
+            <div class="row" style="justify-content:space-between; align-items:center; margin-top:0">
+              <div>
+                <div class="ok">Strutture</div>
+                <div class="muted small">Scope: <code>${data.scope || "?"}</code> · Totale: <code>${items.length}</code></div>
+              </div>
+            </div>
+
+            ${
+              items.length === 0
+                ? `<p class="muted" style="margin-top:12px">Nessuna struttura assegnata.</p>`
+                : `
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Nome</th>
+                        <th>Destination</th>
+                        <th>Stato</th>
+                        <th>ID</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      ${items.map(p => `
+                        <tr>
+                          <td><b>${p.name || ""}</b></td>
+                          <td>${Array.isArray(p.destination) ? (p.destination.join(", ")) : (p.destination || "—")}</td>
+                          <td><span class="tag">${p.status || "—"}</span></td>
+                          <td class="muted"><code>${p.id}</code></td>
+                        </tr>
+                      `).join("")}
+                    </tbody>
+                  </table>
+                `
+            }
+          `;
+        } catch (e) {
+          app.innerHTML = `
+            <div class="bad">Errore di rete</div>
+            <p class="muted">${String(e)}</p>
+          `;
+        }
+      }
+
+      function currentRoute() {
+        const h = (location.hash || "#/home").replace("#/", "");
+        return h === "properties" ? "properties" : "home";
+      }
+
+      async function router() {
+        const app = document.getElementById("app");
+        if (!CURRENT_ME) {
+          app.innerHTML = `<div class="muted">Caricamento…</div>`;
+          return;
+        }
+
+        const route = currentRoute();
+        setActiveNav(route);
+
+        if (route === "properties") {
+          await renderProperties(app, CURRENT_ME);
+        } else {
+          renderHome(app, CURRENT_ME);
+        }
+      }
+
       async function loadMe() {
         const app = document.getElementById("app");
         try {
           const res = await fetch("/api/me", { credentials: "include" });
 
-          if (res.status === 401) {
-            app.innerHTML = `
-              <div class="bad">Non autenticato</div>
-              <p class="muted">Torna indietro e completa il login OTP.</p>
-            `;
-            return;
-          }
+          if (res.status === 401) return renderNotAuthenticated(app);
 
           if (res.status === 403) {
             const data = await res.json().catch(() => ({}));
-            app.innerHTML = `
-              <div class="bad">Accesso non autorizzato</div>
-              <p class="muted">La tua email <code>${(data.email || "sconosciuta")}</code> non risulta abilitata nel sistema.</p>
-              <p class="muted">Contatta l’amministratore per essere aggiunto in Airtable.</p>
-            `;
-            return;
+            return renderUnauthorized(app, data.email);
           }
 
           if (!res.ok) {
             const txt = await res.text().catch(() => "");
-            app.innerHTML = `
-              <div class="bad">Errore</div>
-              <p class="muted">Risposta inattesa dal server: <code>${res.status}</code></p>
-              <pre class="muted" style="white-space:pre-wrap">${txt}</pre>
-            `;
-            return;
+            return renderError(app, res.status, txt);
           }
 
           const me = await res.json();
-          app.innerHTML = `
-            <div class="ok">Accesso OK</div>
-            <p class="muted">Email: <code>${me.email}</code></p>
-            <div class="row">
-              <span class="pill">Ruolo: <b>${me.role}</b></span>
-              <span class="pill">Stato: <b>${me.status}</b></span>
-            </div>
-            <hr style="margin:16px 0;border:none;border-top:1px solid #eee" />
-            <div id="roleArea"></div>
+          CURRENT_ME = me;
+
+          // show nav + identity
+          document.getElementById("nav").style.display = "flex";
+          document.getElementById("who").innerHTML = `
+            <span class="muted">Utente:</span> <code>${me.email}</code>
+            <span class="muted">· ruolo:</span> <code>${me.role}</code>
           `;
 
-          const roleArea = document.getElementById("roleArea");
-
-          if (me.role === "admin") {
-            roleArea.innerHTML = `
-              <h3>Area Admin</h3>
-              <ul>
-                <li>Gestione strutture affiliate</li>
-                <li>Gestione manager e permessi</li>
-                <li>Gestione prenotazioni & relocation</li>
-                <li>Assistente AI (workflow n8n Admin)</li>
-              </ul>
-            `;
-          } else {
-            roleArea.innerHTML = `
-              <h3>Area Manager</h3>
-              <p class="muted">Strutture abilitate: <code>${(me.allowed_property_ids || []).join(", ") || "—"}</code></p>
-              <ul>
-                <li>Disponibilità e prezzi</li>
-                <li>Prenotazioni</li>
-                <li>Relocation (solo sulla stessa destination)</li>
-                <li>Assistente AI (workflow n8n Manager)</li>
-              </ul>
-            `;
-          }
+          // default route
+          if (!location.hash) location.hash = "#/home";
+          await router();
 
         } catch (e) {
           app.innerHTML = `
@@ -100,6 +238,7 @@
         }
       }
 
+      window.addEventListener("hashchange", router);
       loadMe();
     </script>
   </body>
