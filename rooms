@@ -471,6 +471,7 @@ async function boot(){
   setupPropertyScope();
   setupTopbarPrimaryAction();
   renderAll();
+  bindUiEvents();
 }
 
 function setupNav(){
@@ -604,7 +605,7 @@ function renderProperties(){
       <td>${escapeHtml(dest)}</td>
       <td>${statusTag(p.status)}</td>
       <td class="mono">${escapeHtml(p.id)}</td>
-      <td><div class="row-actions"><button class="btn" onclick="selectProperty('${p.id}')">Dettaglio</button></div></td>
+      <td><div class="row-actions"><button class="btn" data-pid="${p.id}" class="btn js-detail">Dettaglio</button></div></td>
     </tr>`;
   }).join("") || `<tr><td colspan="5" class="muted">Nessuna struttura nello scope.</td></tr>`;
 
@@ -941,6 +942,23 @@ async function aiSend(){
   }catch(err){
     aiAddMsg("assistant", `Errore di rete: ${String(err)}`);
   }
+}
+
+
+function bindUiEvents(){
+  const tbl = document.getElementById("propertiesTable");
+  if(tbl && !tbl.__bbhBound){
+    tbl.__bbhBound = true;
+    tbl.addEventListener("click", (ev)=>{
+      const btn = ev.target && ev.target.closest ? ev.target.closest(".js-detail") : null;
+      if(!btn) return;
+      const pid = btn.getAttribute("data-pid") || "";
+      if(pid) selectProperty(pid);
+    });
+  }
+  // Expose for safety (in case of CSP / scope quirks)
+  window.selectProperty = selectProperty;
+  window.setScopeTo = setScopeTo;
 }
 
 window.addEventListener("load", ()=> boot().catch(e=> showFatal("Errore", String(e))));
