@@ -1,0 +1,950 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>BBH Portal – Bike Hotels</title>
+  <style>
+    :root{
+      --bg:#f6f8fb; --card:#ffffff; --text:#0f172a; --muted:#64748b;
+      --border:#e2e8f0; --primary:#1d4ed8; --primary2:#2563eb;
+      --danger:#dc2626; --ok:#16a34a; --warn:#f59e0b;
+      --shadow: 0 10px 30px rgba(2, 6, 23, .08);
+      --radius: 14px;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
+    }
+    *{box-sizing:border-box}
+    body{margin:0; font-family:var(--sans); color:var(--text); background:var(--bg)}
+    a{color:inherit}
+    button, input, select, textarea{font:inherit}
+    .hidden{display:none !important}
+    .app{display:grid; grid-template-columns: 280px 1fr; min-height:100vh}
+    .sidebar{
+      background: #0b1220;
+      color:#e5e7eb;
+      padding:18px 14px;
+      position:sticky; top:0; height:100vh;
+      border-right: 1px solid rgba(148,163,184,.18);
+    }
+    .brand{display:flex; align-items:center; gap:10px; padding:10px 10px 16px}
+    .logo{
+      width:34px; height:34px; border-radius:12px;
+      background: linear-gradient(135deg, var(--primary), #22c55e);
+      box-shadow: 0 12px 18px rgba(37,99,235,.25);
+    }
+    .brand h1{font-size:14px; margin:0}
+    .brand p{margin:2px 0 0; font-size:12px; color:rgba(229,231,235,.7)}
+    .nav{margin-top:8px; display:flex; flex-direction:column; gap:4px}
+    .nav button{
+      width:100%;
+      background:transparent; border:1px solid transparent;
+      color:inherit; text-align:left;
+      padding:10px 10px; border-radius:12px;
+      display:flex; gap:10px; align-items:center;
+      cursor:pointer;
+    }
+    .nav button:hover{background: rgba(148,163,184,.10)}
+    .nav button.active{
+      background: rgba(37,99,235,.18);
+      border-color: rgba(37,99,235,.35);
+    }
+    .nav button:disabled{
+      opacity:.45; cursor:not-allowed;
+    }
+    .nav .ico{
+      width:26px; height:26px; border-radius:10px;
+      background: rgba(148,163,184,.12);
+      display:grid; place-items:center;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size:12px;
+      color: rgba(229,231,235,.95);
+    }
+    .side-footer{
+      position:absolute; bottom:14px; left:14px; right:14px;
+      padding:10px; border:1px solid rgba(148,163,184,.18);
+      background: rgba(15,23,42,.35);
+      border-radius: 14px;
+    }
+    .pill{display:inline-flex; align-items:center; gap:8px; padding:6px 10px; border-radius:999px; font-size:12px;
+      border:1px solid rgba(148,163,184,.22); background: rgba(148,163,184,.10);
+    }
+    .pill b{font-weight:700}
+    .main{padding:18px 20px 28px}
+    .topbar{
+      display:flex; gap:12px; align-items:center; justify-content:space-between;
+      margin-bottom: 14px;
+    }
+    .topbar .left{display:flex; gap:10px; align-items:center}
+    .crumb{font-size:12px; color:var(--muted)}
+    .page-title{font-size:20px; margin:0}
+    .topbar .right{display:flex; gap:10px; align-items:center; flex-wrap:wrap}
+    .btn{
+      border:1px solid var(--border); background:var(--card); color:var(--text);
+      padding:9px 12px; border-radius:12px; cursor:pointer; box-shadow: none;
+      display:inline-flex; align-items:center; gap:8px;
+    }
+    .btn:hover{border-color:#cbd5e1}
+    .btn.primary{background: var(--primary); color:white; border-color: rgba(29,78,216,.35)}
+    .btn.primary:hover{background: var(--primary2)}
+    .btn.danger{background:#fee2e2; border-color:#fecaca; color:#7f1d1d}
+    .btn.ghost{background:transparent; border-color: rgba(148,163,184,.25); color:#e5e7eb}
+    .input, select, textarea{
+      width:100%;
+      border:1px solid var(--border); border-radius:12px;
+      padding:10px 12px; background:white;
+      outline:none;
+    }
+    textarea{min-height:88px; resize:vertical}
+    .grid{display:grid; gap:14px}
+    .grid.cols-2{grid-template-columns: repeat(2, minmax(0,1fr))}
+    .grid.cols-4{grid-template-columns: repeat(4, minmax(0,1fr))}
+    @media (max-width: 1060px){
+      .app{grid-template-columns: 1fr}
+      .sidebar{position:relative; height:auto}
+      .side-footer{position:relative; margin-top:10px}
+      .grid.cols-4{grid-template-columns: repeat(2, minmax(0,1fr))}
+    }
+    @media (max-width: 720px){
+      .grid.cols-2,.grid.cols-4{grid-template-columns: 1fr}
+      .topbar{flex-direction:column; align-items:flex-start}
+      .topbar .right{width:100%; justify-content:flex-start}
+    }
+    .card{
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: var(--radius); box-shadow: var(--shadow);
+      padding: 14px;
+    }
+    .card h3{margin:0 0 10px; font-size:14px}
+    .kpi{display:flex; align-items:flex-start; justify-content:space-between; gap:10px}
+    .kpi .n{font-size:22px; font-weight:800}
+    .kpi .s{font-size:12px; color:var(--muted)}
+    .tag{
+      display:inline-flex; align-items:center; gap:8px;
+      padding:6px 10px; border-radius:999px; font-size:12px;
+      border:1px solid var(--border); background:#f8fafc;
+      color:#0f172a;
+    }
+    .tag.ok{background:#dcfce7; border-color:#bbf7d0; color:#14532d}
+    .tag.warn{background:#fef3c7; border-color:#fde68a; color:#78350f}
+    .tag.danger{background:#fee2e2; border-color:#fecaca; color:#7f1d1d}
+    .table{width:100%; border-collapse:separate; border-spacing:0; overflow:hidden; border-radius: 14px; border:1px solid var(--border)}
+    .table th, .table td{padding:10px 10px; border-bottom:1px solid var(--border); font-size:13px; text-align:left}
+    .table th{background:#f8fafc; color:#334155; font-size:12px}
+    .table tr:last-child td{border-bottom:none}
+    .row-actions{display:flex; gap:8px; justify-content:flex-end}
+    .muted{color:var(--muted)}
+    .split{display:flex; align-items:center; justify-content:space-between; gap:10px}
+    .note{font-size:12px; color:var(--muted); line-height:1.35}
+    .mono{font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;}
+    .banner{
+      background:#0b1220; color:#e5e7eb;
+      border:1px solid rgba(148,163,184,.18);
+      border-radius: 18px;
+      padding: 14px;
+      box-shadow: var(--shadow);
+      margin: 18px;
+    }
+    .banner h2{margin:0 0 8px; font-size:16px}
+    .banner p{margin:0; color: rgba(229,231,235,.72)}
+  </style>
+</head>
+<body>
+
+<section id="loading" class="banner">
+  <h2>Caricamento portale…</h2>
+  <p>Se ti viene chiesto l’OTP, completa l’accesso con Cloudflare Zero Trust.</p>
+</section>
+
+<section id="app" class="app hidden">
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="logo"></div>
+      <div>
+        <h1>BestBikeHotels</h1>
+        <p>Portal – Bike Hotels</p>
+      </div>
+    </div>
+
+    <nav class="nav" id="nav">
+      <button data-view="dashboard" class="active"><span class="ico">D</span> Dashboard</button>
+      <button data-view="properties"><span class="ico">P</span> Strutture</button>
+      <button data-view="bookings" disabled title="In sviluppo"><span class="ico">B</span> Prenotazioni <span class="tag" style="margin-left:auto">Soon</span></button>
+      <button data-view="pricing" disabled title="In sviluppo"><span class="ico">€</span> Prezzi & disponibilità <span class="tag" style="margin-left:auto">Soon</span></button>
+      <button data-view="relocation" disabled title="In sviluppo"><span class="ico">R</span> Relocation <span class="tag" style="margin-left:auto">Soon</span></button>
+      <button data-view="users"><span class="ico">U</span> Utenti</button>
+      <button data-view="settings"><span class="ico">S</span> Impostazioni</button>
+      <button data-view="assistant"><span class="ico">AI</span> Assistente AI</button>
+    </nav>
+
+    <div class="side-footer">
+      <div class="split" style="margin-bottom:10px">
+        <span class="pill" id="pillRole">Ruolo: <b>—</b></span>
+        <button class="btn ghost" id="btnLogout">Esci</button>
+      </div>
+      <div class="note" id="pillContext">—</div>
+      <div class="note" style="margin-top:8px">
+        Utente: <span class="mono" id="pillEmail">—</span>
+      </div>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="topbar">
+      <div class="left">
+        <div>
+          <div class="crumb" id="crumb">—</div>
+          <h2 class="page-title" id="pageTitle">Dashboard</h2>
+        </div>
+      </div>
+      <div class="right" style="min-width:min(520px,100%)">
+        <select id="propertyScope" class="input" style="max-width:320px"></select>
+        <button class="btn primary" id="primaryAction">Azione</button>
+      </div>
+    </div>
+
+    <section id="view-dashboard">
+      <div class="grid cols-4">
+        <div class="card kpi">
+          <div>
+            <div class="s">Strutture visibili</div>
+            <div class="n" id="kpiProps">—</div>
+          </div>
+          <span class="tag ok">OK</span>
+        </div>
+        <div class="card kpi">
+          <div>
+            <div class="s">Prenotazioni (API)</div>
+            <div class="n">—</div>
+          </div>
+          <span class="tag">Soon</span>
+        </div>
+        <div class="card kpi">
+          <div>
+            <div class="s">Disponibilità (API)</div>
+            <div class="n">—</div>
+          </div>
+          <span class="tag">Soon</span>
+        </div>
+        <div class="card kpi">
+          <div>
+            <div class="s">Relocation (API)</div>
+            <div class="n">—</div>
+          </div>
+          <span class="tag">Soon</span>
+        </div>
+      </div>
+
+      <div class="grid cols-2" style="margin-top:14px">
+        <div class="card">
+          <div class="split">
+            <h3>Stato integrazione</h3>
+            <span class="tag ok">Cloudflare Access</span>
+          </div>
+          <div class="note" style="margin-top:10px">
+            ✅ Autenticazione OTP e gating ruoli via <span class="mono">/api/me</span><br/>
+            ✅ Lista strutture filtrata per ruolo via <span class="mono">/api/properties</span><br/>
+            ⏳ Prossimo: camere, prezzi, disponibilità, prenotazioni, relocation
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="split">
+            <h3>Contesto</h3>
+            <span class="tag" id="tagScope">—</span>
+          </div>
+          <div class="note" id="contextNote" style="margin-top:10px">—</div>
+        </div>
+      </div>
+    </section>
+
+    <section id="view-properties" class="hidden">
+      <div class="grid cols-2">
+        <div class="card">
+          <div class="split">
+            <h3>Strutture</h3>
+            <span class="tag" id="propsScopeTag">—</span>
+          </div>
+          <table class="table" aria-label="Elenco strutture" style="margin-top:12px">
+            <thead><tr><th>Nome</th><th>Destination</th><th>Stato</th><th>ID</th><th style="text-align:right">Azioni</th></tr></thead>
+            <tbody id="tblProperties"></tbody>
+          </table>
+          <div class="note" style="margin-top:10px">
+            Nota: qui gestisci le <b>Strutture</b>. Nel pannello a destra puoi gestire anche le <b>Camere</b> per la struttura selezionata.
+          </div>
+        </div>
+
+        <div class="card">
+          <h3>Dettaglio struttura</h3>
+          <div id="propertyDetail" class="note">Seleziona una struttura dalla tabella.</div>
+        </div>
+      </div>
+    </section>
+
+    <section id="view-bookings" class="hidden"><div class="card"><h3>Prenotazioni</h3><div class="note">In sviluppo.</div></div></section>
+    <section id="view-pricing" class="hidden"><div class="card"><h3>Prezzi & disponibilità</h3><div class="note">In sviluppo.</div></div></section>
+    <section id="view-relocation" class="hidden"><div class="card"><h3>Relocation</h3><div class="note">In sviluppo.</div></div></section>
+
+    <section id="view-users" class="hidden">
+      <div class="card">
+        <h3>Utenti</h3>
+        <div class="note">
+          Per ora si gestiscono in Airtable (Users). Prossimo endpoint: <span class="mono">GET /api/users</span> (admin).
+        </div>
+      </div>
+    </section>
+
+    <section id="view-settings" class="hidden">
+      <div class="card">
+        <h3>Impostazioni</h3>
+        <div class="note">In sviluppo.</div>
+      </div>
+    </section>
+
+    <section id="view-assistant" class="hidden">
+      <div class="grid cols-2">
+        <div class="card">
+          <div class="split">
+            <div>
+              <h3 style="margin:0">Assistente AI</h3>
+              <div class="muted" style="font-size:12px">Workflow diverso per Admin e Manager (n8n).</div>
+            </div>
+            <button class="btn" onclick="aiInsertQuickPrompt()">Suggerisci prompt</button>
+          </div>
+
+          <div style="margin-top:12px" class="grid cols-2">
+            <div>
+              <label class="note">Contesto</label>
+              <select id="aiContext" class="input">
+                <option value="operations">Operatività</option>
+                <option value="pricing">Pricing</option>
+                <option value="relocation">Relocation</option>
+                <option value="support">Supporto ospite</option>
+                <option value="admin">Admin</option>
+              </select>
+            </div>
+            <div>
+              <label class="note">Tono</label>
+              <select id="aiTone" class="input">
+                <option value="friendly" selected>Amichevole</option>
+                <option value="neutral">Neutro</option>
+                <option value="formal">Formale</option>
+                <option value="concise">Molto conciso</option>
+              </select>
+            </div>
+          </div>
+
+          <div style="margin-top:12px">
+            <label class="note">Messaggio</label>
+            <textarea id="aiInput" class="input" placeholder="Scrivi qui…"></textarea>
+            <div style="display:flex; gap:10px; margin-top:10px; align-items:center; flex-wrap:wrap">
+              <button class="btn primary" onclick="aiSend()">Invia a n8n</button>
+              <span class="note" id="aiEndpointNote">Endpoint: —</span>
+            </div>
+          </div>
+
+          <div style="margin-top:12px">
+            <label class="note">Chat</label>
+            <div class="card" style="padding:12px; background:#fff; border:1px solid var(--border); box-shadow:none">
+              <div id="aiChat" style="max-height:340px; overflow:auto; display:flex; flex-direction:column; gap:10px"></div>
+            </div>
+            <div class="note" id="aiHint" style="margin-top:10px"></div>
+          </div>
+
+          <div class="note" style="margin-top:12px">
+            Nota: se i webhook n8n non sono impostati, l’assistente risponde in modalità offline.
+          </div>
+        </div>
+
+        <div class="card">
+          <h3>Webhooks n8n</h3>
+          <div class="note">Imposta due endpoint (uno Admin, uno Manager). Salvati nel browser.</div>
+
+          <div style="margin-top:12px">
+            <label class="note">Webhook Admin (n8n)</label>
+            <input id="aiWebhookAdmin" class="input" placeholder="https://.../webhook/bbh-admin-ai"/>
+          </div>
+
+          <div style="margin-top:12px">
+            <label class="note">Webhook Manager (n8n)</label>
+            <input id="aiWebhookManager" class="input" placeholder="https://.../webhook/bbh-manager-ai"/>
+          </div>
+
+          <div style="margin-top:12px; display:flex; gap:10px; justify-content:flex-end; flex-wrap:wrap">
+            <button class="btn" onclick="aiLoadConfig()">Ricarica</button>
+            <button class="btn primary" onclick="aiSaveConfig()">Salva</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+</section>
+
+<script>
+async function apiGet(path){
+  const res = await fetch(path, { credentials: "include" });
+  const ct = (res.headers.get("content-type") || "").toLowerCase();
+  let data = null;
+  if(ct.includes("application/json")){
+    data = await res.json().catch(()=>null);
+  }else{
+    const t = await res.text().catch(()=> "");
+    try{ data = JSON.parse(t); }catch(e){ data = { raw: t }; }
+  }
+  return { ok: res.ok, status: res.status, data };
+}
+
+async function apiSend(path, method, body){
+  const res = await fetch(path, {
+    method,
+    credentials: "include",
+    headers: { "content-type": "application/json" },
+    body: body ? JSON.stringify(body) : undefined
+  });
+  const ct = (res.headers.get("content-type") || "").toLowerCase();
+  let data = null;
+  if(ct.includes("application/json")){
+    data = await res.json().catch(()=>null);
+  }else{
+    const t = await res.text().catch(()=> "");
+    try{ data = JSON.parse(t); }catch(e){ data = { raw: t }; }
+  }
+  return { ok: res.ok, status: res.status, data };
+}
+function escapeHtml(str){
+  return String(str||"")
+    .replaceAll("&","&amp;")
+    .replaceAll("<","&lt;")
+    .replaceAll(">","&gt;")
+    .replaceAll('"',"&quot;")
+    .replaceAll("'","&#039;");
+}
+
+let ME = null;
+let PROPS = [];
+let SELECTED_PROPERTY_ID = "";
+
+const views = ["dashboard","properties","bookings","pricing","relocation","users","settings","assistant"];
+function canAdmin(){ return String(ME?.role || "").toLowerCase() === "admin"; }
+
+function selectedPropertyLabel(){
+  if(!ME) return "—";
+  if(canAdmin() && !SELECTED_PROPERTY_ID) return "Tutte le strutture";
+  const p = PROPS.find(x=>x.id===SELECTED_PROPERTY_ID) || null;
+  return p ? `${p.name}${p.destination?` (${Array.isArray(p.destination)?p.destination.join(", "):p.destination})`:``}` : "—";
+}
+
+function statusTag(status){
+  const s = String(status||"").toLowerCase();
+  if(s==="active") return `<span class="tag ok">active</span>`;
+  if(s==="pending") return `<span class="tag warn">pending</span>`;
+  if(s==="suspended" || s==="inactive") return `<span class="tag danger">${escapeHtml(status)}</span>`;
+  return `<span class="tag">${escapeHtml(status||"—")}</span>`;
+}
+
+function showFatal(title, text){
+  const loading = document.getElementById("loading");
+  loading.innerHTML = `
+    <h2>${escapeHtml(title)}</h2>
+    <p>${escapeHtml(text)}</p>
+    <p class="note" style="margin-top:10px">Completa l’OTP (Cloudflare Access) e poi ricarica.</p>
+  `;
+}
+
+async function boot(){
+  const me = await apiGet("/api/me");
+  if(me.status === 401) return showFatal("Non autenticato", "Completa l’OTP e ricarica.");
+  if(me.status === 403) return showFatal("Utente non abilitato", "Email non registrata/attiva in Airtable (Users).");
+  if(!me.ok || !me.data || !me.data.ok) return showFatal("Errore", `Impossibile caricare /api/me (status ${me.status}).`);
+  ME = me.data;
+
+  const props = await apiGet("/api/properties");
+  if(!props.ok || !props.data || !props.data.ok) return showFatal("Errore", `Impossibile caricare /api/properties (status ${props.status}).`);
+  PROPS = props.data.items || [];
+
+  document.getElementById("loading").classList.add("hidden");
+  document.getElementById("app").classList.remove("hidden");
+
+  setupNav();
+  applyRoleRestrictions();
+  setupPropertyScope();
+  setupTopbarPrimaryAction();
+  renderAll();
+}
+
+function setupNav(){
+  document.getElementById("nav").querySelectorAll("button[data-view]").forEach(btn=>{
+    const view = btn.dataset.view;
+    btn.onclick = ()=> setView(view);
+  });
+}
+
+function setView(view){
+  if(!views.includes(view)) view = "dashboard";
+  document.querySelectorAll("#nav button[data-view]").forEach(b=>b.classList.toggle("active", b.dataset.view===view));
+  views.forEach(v=>{
+    const el = document.getElementById("view-"+v);
+    if(el) el.classList.toggle("hidden", v!==view);
+  });
+
+  const titleMap = {
+    dashboard:"Dashboard",
+    properties:"Strutture",
+    bookings:"Prenotazioni",
+    pricing:"Prezzi & disponibilità",
+    relocation:"Relocation",
+    users:"Utenti",
+    settings:"Impostazioni",
+    assistant:"Assistente AI"
+  };
+  document.getElementById("crumb").textContent = canAdmin() ? "Admin" : "Manager";
+  document.getElementById("pageTitle").textContent = titleMap[view] || "Dashboard";
+
+  setupTopbarPrimaryAction(view);
+  if(view === "assistant") aiInit();
+}
+
+function applyRoleRestrictions(){
+  document.getElementById("pillRole").innerHTML = `Ruolo: <b>${canAdmin() ? "Admin" : "Manager"}</b>`;
+  document.getElementById("pillEmail").textContent = ME.email || "—";
+  document.getElementById("pillContext").innerHTML = canAdmin()
+    ? `Gestisci <b>${PROPS.length}</b> strutture.`
+    : `Stai gestendo: <b>${PROPS[0]?.name || "—"}</b>.`;
+
+  ["users","settings"].forEach(v=>{
+    const btn = document.querySelector(`#nav button[data-view="${v}"]`);
+    if(btn) btn.style.display = canAdmin() ? "flex" : "none";
+  });
+
+  const scope = document.getElementById("propertyScope");
+  scope.disabled = !canAdmin();
+  scope.style.opacity = canAdmin() ? 1 : .7;
+
+  document.getElementById("btnLogout").onclick = ()=>{ window.location.href = "/cdn-cgi/access/logout"; };
+}
+
+function setupPropertyScope(){
+  const scope = document.getElementById("propertyScope");
+  scope.innerHTML = "";
+
+  if(canAdmin()){
+    scope.insertAdjacentHTML("beforeend", `<option value="">Tutte le strutture</option>`);
+    for(const p of PROPS){
+      const dest = Array.isArray(p.destination) ? p.destination.join(", ") : (p.destination||"");
+      scope.insertAdjacentHTML("beforeend", `<option value="${escapeHtml(p.id)}">${escapeHtml(p.name)}${dest?` (${escapeHtml(dest)})`:``}</option>`);
+    }
+    scope.value = "";
+    SELECTED_PROPERTY_ID = "";
+  }else{
+    if(PROPS.length){
+      scope.insertAdjacentHTML("beforeend", `<option value="${escapeHtml(PROPS[0].id)}">${escapeHtml(PROPS[0].name)}</option>`);
+      scope.value = PROPS[0].id;
+      SELECTED_PROPERTY_ID = PROPS[0].id;
+    }else{
+      scope.insertAdjacentHTML("beforeend", `<option value="">Nessuna struttura assegnata</option>`);
+      scope.value = "";
+      SELECTED_PROPERTY_ID = "";
+    }
+  }
+
+  scope.onchange = ()=>{
+    SELECTED_PROPERTY_ID = scope.value || "";
+    renderAll();
+  };
+
+  document.getElementById("tagScope").textContent = selectedPropertyLabel();
+  document.getElementById("propsScopeTag").textContent = canAdmin() ? (SELECTED_PROPERTY_ID ? "Selezione" : "Tutte") : "Assegnate";
+  document.getElementById("contextNote").innerHTML = `Scope corrente: <b>${escapeHtml(selectedPropertyLabel())}</b>.`;
+}
+
+function setupTopbarPrimaryAction(view = "dashboard"){
+  const btn = document.getElementById("primaryAction");
+  if(view === "properties"){
+    btn.textContent = "Aggiorna lista";
+    btn.onclick = async ()=>{ await reloadProperties(); };
+  }else if(view === "assistant"){
+    btn.textContent = "Apri AI";
+    btn.onclick = ()=> setView("assistant");
+  }else{
+    btn.textContent = "Vai a Strutture";
+    btn.onclick = ()=> setView("properties");
+  }
+}
+
+async function reloadProperties(){
+  const props = await apiGet("/api/properties");
+  if(!props.ok || !props.data || !props.data.ok){ alert("Errore /api/properties"); return; }
+  PROPS = props.data.items || [];
+  setupPropertyScope();
+  renderAll();
+}
+
+function inScope(propId){
+  if(!canAdmin()) return true;
+  if(!SELECTED_PROPERTY_ID) return true;
+  return propId === SELECTED_PROPERTY_ID;
+}
+
+function renderDashboard(){
+  const visible = PROPS.filter(p=>inScope(p.id));
+  document.getElementById("kpiProps").textContent = String(visible.length);
+  document.getElementById("tagScope").textContent = selectedPropertyLabel();
+  document.getElementById("contextNote").innerHTML = `Scope corrente: <b>${escapeHtml(selectedPropertyLabel())}</b>.`;
+}
+
+function renderProperties(){
+  const tbody = document.getElementById("tblProperties");
+  const items = PROPS.filter(p=>inScope(p.id));
+
+  tbody.innerHTML = items.map(p=>{
+    const dest = Array.isArray(p.destination) ? p.destination.join(", ") : (p.destination||"—");
+    return `<tr>
+      <td><b>${escapeHtml(p.name||"")}</b></td>
+      <td>${escapeHtml(dest)}</td>
+      <td>${statusTag(p.status)}</td>
+      <td class="mono">${escapeHtml(p.id)}</td>
+      <td><div class="row-actions"><button class="btn" onclick="selectProperty('${p.id}')">Dettaglio</button></div></td>
+    </tr>`;
+  }).join("") || `<tr><td colspan="5" class="muted">Nessuna struttura nello scope.</td></tr>`;
+
+  if(items.length) selectProperty(SELECTED_PROPERTY_ID || items[0].id, true);
+}
+
+
+async function selectProperty(id){
+  const p = PROPS.find(x=>x.id===id);
+  const box = document.getElementById("propertyDetail");
+  if(!p){ box.textContent="Struttura non trovata."; return; }
+  DETAIL_PROPERTY_ID = id;
+
+  const dest = Array.isArray(p.destination) ? p.destination.join(", ") : (p.destination||"—");
+
+  box.innerHTML = `
+    <div class="split">
+      <div>
+        <div class="tag">${escapeHtml(dest)}</div>
+        <h2 style="margin:10px 0 0; font-size:18px">${escapeHtml(p.name||"")}</h2>
+        <div class="note">Stato: ${statusTag(p.status)}</div>
+        <div class="note">ID: <span class="mono">${escapeHtml(p.id)}</span></div>
+      </div>
+      ${canAdmin() ? `<button class="btn primary" onclick="setScopeTo('${p.id}')">Lavora su questa struttura</button>` : ``}
+    </div>
+
+    <div class="hr" style="margin:14px 0"></div>
+
+    <div class="split">
+      <h3 style="margin:0">Camere</h3>
+      <span class="tag">Endpoint: <span class="mono">/api/rooms</span></span>
+    </div>
+    <div id="roomsBlock" class="note" style="margin-top:10px">Caricamento camere...</div>
+  `;
+
+  const out = await loadRooms(id);
+  if(!out.ok){
+    const host = document.getElementById("roomsBlock");
+    if(host) host.innerHTML = `<span class="tag" style="border-color:#ef4444">Errore caricamento camere (status ${escapeHtml(out.status)}).</span>`;
+    return;
+  }
+  renderRoomsBlock(id);
+}
+
+function setScopeTo(id){
+  if(!canAdmin()) return;
+  document.getElementById("propertyScope").value = id;
+  SELECTED_PROPERTY_ID = id;
+  renderAll();
+}
+
+
+async function loadRooms(propertyId){
+  if(!propertyId) return { ok:true, items: [] };
+  const cached = ROOMS_BY_PROPERTY[propertyId];
+  if(cached && cached.items) return { ok:true, items: cached.items, cached:true };
+
+  const out = await apiGet(`/api/rooms?property_id=${encodeURIComponent(propertyId)}`);
+  if(!out.ok || !out.data || !out.data.ok){
+    return { ok:false, status: out.status, error: out.data || null };
+  }
+  ROOMS_BY_PROPERTY[propertyId] = { loadedAt: Date.now(), items: out.data.items || [] };
+  return { ok:true, items: ROOMS_BY_PROPERTY[propertyId].items };
+}
+
+function roomStatusSelectHtml(value, idPrefix){
+  const v = String(value||"active").toLowerCase();
+  return `
+    <select class="input" id="${idPrefix}-status">
+      <option value="active" ${v==="active"?"selected":""}>active</option>
+      <option value="inactive" ${v==="inactive"?"selected":""}>inactive</option>
+    </select>
+  `;
+}
+
+function renderRoomsBlock(propertyId){
+  const host = document.getElementById("roomsBlock");
+  if(!host) return;
+  const cached = ROOMS_BY_PROPERTY[propertyId];
+  const items = cached?.items || [];
+
+  const rows = items.map(r=>{
+    const rid = escapeHtml(r.id);
+    return `
+      <tr>
+        <td><input class="input" id="room-${rid}-name" value="${escapeHtml(r.name||"")}" /></td>
+        <td style="width:120px"><input class="input" id="room-${rid}-capacity" type="number" min="0" value="${escapeHtml(r.capacity ?? "")}" /></td>
+        <td style="width:120px"><input class="input" id="room-${rid}-quantity" type="number" min="0" value="${escapeHtml(r.quantity ?? "")}" /></td>
+        <td style="width:140px">${roomStatusSelectHtml(r.status, `room-${rid}`)}</td>
+        <td style="text-align:right">
+          <button class="btn" onclick="updateRoom('${rid}','${escapeHtml(propertyId)}')">Salva</button>
+        </td>
+      </tr>
+    `;
+  }).join("") || `<tr><td colspan="5" class="muted">Nessuna camera inserita per questa struttura.</td></tr>`;
+
+  host.innerHTML = `
+    <div class="note" style="margin:6px 0 10px">
+      Qui definisci i <b>tipi camera</b> (es. Doppia/Tripla) e la relativa <b>quantità</b>. Questi dati saranno la base per disponibilità e prenotazioni.
+    </div>
+    <table class="table" aria-label="Camere">
+      <thead>
+        <tr><th>Nome</th><th>Capienza</th><th>Quantità</th><th>Status</th><th style="text-align:right">Azioni</th></tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>
+
+    <div class="hr" style="margin:14px 0"></div>
+
+    <div class="split">
+      <h4 style="margin:0">Aggiungi camera</h4>
+      <span class="tag">Property scope: <span class="mono">${escapeHtml(propertyId)}</span></span>
+    </div>
+
+    <div class="grid cols-4" style="margin-top:10px">
+      <div>
+        <label class="label">Nome</label>
+        <input class="input" id="room-new-name" placeholder="Es. Doppia" />
+      </div>
+      <div>
+        <label class="label">Capienza</label>
+        <input class="input" id="room-new-capacity" type="number" min="0" placeholder="2" />
+      </div>
+      <div>
+        <label class="label">Quantità</label>
+        <input class="input" id="room-new-quantity" type="number" min="0" placeholder="4" />
+      </div>
+      <div>
+        <label class="label">Status</label>
+        <select class="input" id="room-new-status">
+          <option value="active" selected>active</option>
+          <option value="inactive">inactive</option>
+        </select>
+      </div>
+    </div>
+
+    <div style="margin-top:12px; display:flex; gap:10px; justify-content:flex-end">
+      <button class="btn primary" onclick="createRoom('${escapeHtml(propertyId)}')">Aggiungi</button>
+    </div>
+
+    <div class="note" id="roomsMsg" style="margin-top:10px"></div>
+  `;
+}
+
+function setRoomsMsg(text, isErr=false){
+  const el = document.getElementById("roomsMsg");
+  if(!el) return;
+  el.innerHTML = isErr ? `<span class="tag" style="border-color:#ef4444">${escapeHtml(text)}</span>` : escapeHtml(text);
+}
+
+async function createRoom(propertyId){
+  const name = document.getElementById("room-new-name")?.value?.trim() || "";
+  const capacity = document.getElementById("room-new-capacity")?.value;
+  const quantity = document.getElementById("room-new-quantity")?.value;
+  const status = document.getElementById("room-new-status")?.value || "active";
+
+  if(!name){ return setRoomsMsg("Nome obbligatorio.", true); }
+  const body = {
+    property_id: propertyId,
+    name,
+    capacity: capacity === "" ? null : Number(capacity),
+    quantity: quantity === "" ? null : Number(quantity),
+    status
+  };
+
+  setRoomsMsg("Salvataggio in corso...");
+  const out = await apiSend("/api/rooms", "POST", body);
+  if(!out.ok || !out.data || !out.data.ok){
+    return setRoomsMsg(`Errore creazione camera (status ${out.status}).`, true);
+  }
+
+  // refresh rooms
+  ROOMS_BY_PROPERTY[propertyId] = null;
+  await loadRooms(propertyId);
+  renderRoomsBlock(propertyId);
+
+  // reset form
+  document.getElementById("room-new-name").value = "";
+  document.getElementById("room-new-capacity").value = "";
+  document.getElementById("room-new-quantity").value = "";
+  document.getElementById("room-new-status").value = "active";
+
+  setRoomsMsg("Camera aggiunta.");
+}
+
+async function updateRoom(roomId, propertyId){
+  const name = document.getElementById(`room-${roomId}-name`)?.value?.trim() || "";
+  const capacity = document.getElementById(`room-${roomId}-capacity`)?.value;
+  const quantity = document.getElementById(`room-${roomId}-quantity`)?.value;
+  const status = document.getElementById(`room-${roomId}-status`)?.value || "active";
+
+  if(!name){ return setRoomsMsg("Nome obbligatorio.", true); }
+
+  const body = {
+    name,
+    capacity: capacity === "" ? null : Number(capacity),
+    quantity: quantity === "" ? null : Number(quantity),
+    status
+  };
+
+  setRoomsMsg("Aggiornamento in corso...");
+  const out = await apiSend(`/api/rooms/${encodeURIComponent(roomId)}`, "PUT", body);
+  if(!out.ok || !out.data || !out.data.ok){
+    return setRoomsMsg(`Errore aggiornamento (status ${out.status}).`, true);
+  }
+
+  // update cached item in place
+  const cached = ROOMS_BY_PROPERTY[propertyId];
+  if(cached?.items){
+    const idx = cached.items.findIndex(x=>x.id===roomId);
+    if(idx>=0) cached.items[idx] = out.data.item;
+  }
+
+  setRoomsMsg("Salvato.");
+}
+function renderAll(){
+  setupPropertyScope();
+  renderDashboard();
+  renderProperties();
+  aiRenderHint();
+}
+
+/* AI */
+const AI_CFG_KEY = "bbh_ai_cfg_v1";
+function aiDefaultCfg(){ return { adminWebhook:"", managerWebhook:"" }; }
+function aiGetCfg(){
+  try{
+    const raw = localStorage.getItem(AI_CFG_KEY);
+    return raw ? Object.assign(aiDefaultCfg(), JSON.parse(raw)) : aiDefaultCfg();
+  }catch(e){ return aiDefaultCfg(); }
+}
+function aiSaveConfig(){
+  const cfg = aiGetCfg();
+  cfg.adminWebhook = (document.getElementById("aiWebhookAdmin")?.value || "").trim();
+  cfg.managerWebhook = (document.getElementById("aiWebhookManager")?.value || "").trim();
+  localStorage.setItem(AI_CFG_KEY, JSON.stringify(cfg));
+  aiUpdateEndpointNote();
+  aiAddMsg("assistant", "Configurazione salvata.");
+}
+function aiLoadConfig(){
+  const cfg = aiGetCfg();
+  if(document.getElementById("aiWebhookAdmin")) document.getElementById("aiWebhookAdmin").value = cfg.adminWebhook || "";
+  if(document.getElementById("aiWebhookManager")) document.getElementById("aiWebhookManager").value = cfg.managerWebhook || "";
+  aiUpdateEndpointNote();
+}
+function aiEndpointForRole(){
+  const cfg = aiGetCfg();
+  return canAdmin() ? (cfg.adminWebhook||"") : (cfg.managerWebhook||"");
+}
+function aiUpdateEndpointNote(){
+  const note = document.getElementById("aiEndpointNote");
+  if(!note) return;
+  const url = aiEndpointForRole();
+  note.textContent = url ? `Endpoint: ${url}` : "Endpoint: (non impostato)";
+}
+function aiInit(){
+  const chat = document.getElementById("aiChat");
+  if(!chat) return;
+  aiLoadConfig();
+  chat.innerHTML = "";
+  aiAddMsg("assistant", "Ciao! Admin e Manager usano webhook diversi.");
+  aiRenderHint();
+}
+function aiRenderHint(){
+  const hint = document.getElementById("aiHint");
+  if(!hint || !ME) return;
+  hint.innerHTML = `Modalità <b>${canAdmin() ? "Admin" : "Manager"}</b> · Scope: <b>${escapeHtml(selectedPropertyLabel())}</b>`;
+}
+function aiAddMsg(who, text){
+  const chat = document.getElementById("aiChat");
+  if(!chat) return;
+  const div = document.createElement("div");
+  div.className = "tag";
+  div.style.whiteSpace = "pre-wrap";
+  div.style.background = who==="user" ? "#eff6ff" : "#f8fafc";
+  div.style.borderColor = who==="user" ? "#bfdbfe" : "var(--border)";
+  div.innerHTML = `<b style="margin-right:8px">${who==="user"?"Tu":"AI"}</b>${escapeHtml(text)}`;
+  chat.appendChild(div);
+  chat.scrollTop = chat.scrollHeight;
+}
+function aiInsertQuickPrompt(){
+  const inp = document.getElementById("aiInput");
+  if(!inp) return;
+  inp.value = canAdmin()
+    ? "Elenca le strutture inattive o senza manager assegnato e suggerisci le azioni."
+    : "Riepiloga le prenotazioni della settimana per la mia struttura e scrivi un messaggio di conferma per i prossimi arrivi.";
+  inp.focus();
+}
+async function aiSend(){
+  const inp = document.getElementById("aiInput");
+  const text = (inp?.value || "").trim();
+  if(!text) return;
+
+  aiAddMsg("user", text);
+  inp.value = "";
+
+  const url = aiEndpointForRole();
+  const ctx = (document.getElementById("aiContext")?.value || "operations");
+  const tone = (document.getElementById("aiTone")?.value || "friendly");
+
+  const payload = {
+    message: text,
+    context: ctx,
+    tone,
+    session: {
+      role: canAdmin() ? "admin" : "manager",
+      email: ME?.email || "",
+      allowed_property_ids: ME?.allowed_property_ids || [],
+      scope_property_id: SELECTED_PROPERTY_ID || null,
+      scope_label: selectedPropertyLabel()
+    },
+    snapshot: { properties: PROPS.filter(p=>inScope(p.id)).slice(0,50) }
+  };
+
+  if(!url){
+    aiAddMsg("assistant", "Webhook n8n non configurato. Inserisci gli URL a destra e clicca Salva.");
+    return;
+  }
+
+  aiAddMsg("assistant", "Invio a n8n…");
+  try{
+    const res = await fetch(url, { method:"POST", headers:{ "Content-Type":"application/json" }, body: JSON.stringify(payload) });
+    if(!res.ok){
+      const t = await res.text();
+      aiAddMsg("assistant", `Errore n8n (${res.status}). ${t.slice(0,300)}`);
+      return;
+    }
+    const ct = (res.headers.get("content-type") || "").toLowerCase();
+    let data = null;
+    if(ct.includes("application/json")) data = await res.json();
+    else data = { reply: await res.text() };
+    const reply = data?.reply || data?.message || data?.output || JSON.stringify(data);
+    aiAddMsg("assistant", String(reply));
+  }catch(err){
+    aiAddMsg("assistant", `Errore di rete: ${String(err)}`);
+  }
+}
+
+window.addEventListener("load", ()=> boot().catch(e=> showFatal("Errore", String(e))));
+</script>
+
+</body>
+</html>
